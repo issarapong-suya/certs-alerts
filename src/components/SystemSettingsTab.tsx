@@ -151,21 +151,23 @@ export default function SystemSettingsTab({
             </div>
 
             {/* Toggle Switch */}
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                disabled={!isAdmin}
-                checked={formData.enable_discord}
-                onChange={(e) =>
-                  setFormData({ ...formData, enable_discord: e.target.checked })
-                }
-                className="sr-only peer"
-              />
-              <div className="w-13 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#5865F2]"></div>
-              <span className="ml-3 text-sm font-bold text-slate-700">
-                {formData.enable_discord ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-              </span>
-            </label>
+            <div className="flex items-center gap-2.5 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200/80 shrink-0">
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  disabled={!isAdmin}
+                  checked={formData.enable_discord}
+                  onChange={(e) =>
+                    setFormData({ ...formData, enable_discord: e.target.checked })
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865F2]"></div>
+                <span className="ml-3 text-sm font-bold text-slate-800 whitespace-nowrap min-w-[56px]">
+                  {formData.enable_discord ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="mt-6 space-y-3">
@@ -209,21 +211,23 @@ export default function SystemSettingsTab({
             </div>
 
             {/* Toggle Switch */}
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                disabled={!isAdmin}
-                checked={formData.enable_email}
-                onChange={(e) =>
-                  setFormData({ ...formData, enable_email: e.target.checked })
-                }
-                className="sr-only peer"
-              />
-              <div className="w-13 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
-              <span className="ml-3 text-sm font-bold text-slate-700">
-                {formData.enable_email ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-              </span>
-            </label>
+            <div className="flex items-center gap-2.5 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200/80 shrink-0">
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  disabled={!isAdmin}
+                  checked={formData.enable_email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, enable_email: e.target.checked })
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span className="ml-3 text-sm font-bold text-slate-800 whitespace-nowrap min-w-[56px]">
+                  {formData.enable_email ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="mt-6 space-y-3">
@@ -390,8 +394,11 @@ export default function SystemSettingsTab({
 
               {/* Time of day */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  เวลาที่ต้องการส่ง (Schedule Time)
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center justify-between">
+                  <span>เวลาที่ต้องการส่ง (Schedule Time)</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                    รอบ Vercel Cron: 08:00 น.
+                  </span>
                 </label>
                 <div className="relative">
                   <input
@@ -404,17 +411,28 @@ export default function SystemSettingsTab({
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                <p className="text-xs text-slate-500 mt-1.5">
+                  * ค่าเริ่มต้นระบบ Vercel Cron ตั้งรอบส่งไว้ที่ 08:00 น. (เช้า) ของทุกวัน
+                </p>
               </div>
             </div>
 
             {/* Note about Vercel Cron */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <strong>หมายเหตุการทำงานของระบบอัตโนมัติ:</strong> การส่งแจ้งเตือนจะถูกกระตุ้นโดย Vercel Cron (Endpoint: <code>/api/cron/notify-expiry</code>) เมื่อระบบทำงานจะตรวจสอบความถี่และเงื่อนไขวันที่คุณกำหนดไว้ด้านบนโดยอัตโนมัติ
+            <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-slate-700 flex items-start gap-3">
+              <Info className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1.5">
+                <div>
+                  <strong className="text-indigo-950 text-sm font-bold">รอบการทำงานของระบบอัตโนมัติ (Automated Cron):</strong>
+                </div>
+                <p>
+                  • <strong>บน Vercel Production:</strong> ระบบจะถูกกระตุ้นโดย Vercel Cron อัตโนมัติทุกวันเวลา <strong>08:00 น.</strong> (ตามไฟล์ <code>vercel.json</code>) เพื่อตรวจสอบความถี่ (รายวัน/สัปดาห์/เดือน) และยิงสรุปเข้ากลุ่ม
+                </p>
+                <p>
+                  • <strong>บน Localhost (เครื่องตนเอง):</strong> จะไม่มีตัวกระตุ้น Cron อัตโนมัติ แต่สามารถทดสอบได้ทันทีโดยกดปุ่ม <strong>&quot;ทดสอบส่งรายงานส่วนกลาง&quot;</strong> ด้านล่างนี้ หรือยิงผ่าน API <code>/api/cron/notify-expiry</code>
+                </p>
                 {formData.last_run_at && (
-                  <div className="mt-1 text-slate-500">
-                    ทำงานล่าสุดเมื่อ: {new Date(formData.last_run_at).toLocaleString('th-TH')}
+                  <div className="text-slate-500 pt-1 font-medium">
+                    🕒 ระบบอัตโนมัติทำงานล่าสุดเมื่อ: {new Date(formData.last_run_at).toLocaleString('th-TH')}
                   </div>
                 )}
               </div>
