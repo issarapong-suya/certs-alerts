@@ -7,7 +7,10 @@ import { formatDisplayDate, getCertificateStatus } from '@/lib/certificate-utils
  * Send Individual Alert to a specific personnel member
  * Only includes this person's certificates!
  */
-export async function sendIndividualPersonnelAlert(person: Personnel): Promise<{
+export async function sendIndividualPersonnelAlert(
+  person: Personnel,
+  onlyIfHasAlerts: boolean = false
+): Promise<{
   success: boolean;
   message?: string;
   error?: string;
@@ -34,6 +37,13 @@ export async function sendIndividualPersonnelAlert(person: Personnel): Promise<{
   }
 
   const hasAlerts = expiredCerts.length > 0 || expiringCerts.length > 0;
+
+  if (onlyIfHasAlerts && !hasAlerts) {
+    return {
+      success: true,
+      message: 'ไม่มีใบประกาศที่หมดอายุหรือใกล้หมดอายุ (ข้ามการแจ้งเตือน)',
+    };
+  }
 
   // Track results
   let discordResult = { attempted: false, success: false, error: '' };

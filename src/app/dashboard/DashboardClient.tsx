@@ -266,10 +266,10 @@ export default function DashboardClient({
   }
 
   async function handleTestAlert(person: Personnel) {
-    if (!person.discord_webhook_url && !person.email) {
+    if (!person.discord_webhook_url && !person.discord_user_id && !person.email) {
       showError(
         'ยังไม่ได้ตั้งค่าช่องทางแจ้งเตือน',
-        `กรุณากดแก้ไขข้อมูลของ ${person.name} เพื่อระบุ Discord Webhook หรือ Email ก่อน`
+        `กรุณากดแก้ไขข้อมูลของ ${person.name} เพื่อระบุ Discord (Webhook หรือ Bot DM) หรือ Email ก่อน`
       );
       return;
     }

@@ -82,15 +82,15 @@ async function handleCron(request: NextRequest) {
 
     const activePersonnel = (personnelList as Personnel[]) || [];
 
-    // 4. Send Individual alerts to each person
+    // 4. Send Individual alerts to each person (only if they have expiring/expired certificates)
     const individualPromises = activePersonnel.map(async (person) => {
       const hasChannel =
-        (person.enable_discord && person.discord_webhook_url?.trim()) ||
+        (person.enable_discord && (person.discord_webhook_url?.trim() || person.discord_user_id?.trim())) ||
         (person.enable_email && person.email?.trim());
 
       if (!hasChannel) return null;
 
-      return await sendIndividualPersonnelAlert(person);
+      return await sendIndividualPersonnelAlert(person, true);
     });
 
     // 5. Send Master Admin Summary if scheduled
