@@ -50,6 +50,7 @@ export async function createPersonnel(formData: {
   enable_email?: boolean;
   is_active?: boolean;
   note?: string | null;
+  discord_user_id?: string | null;
   initial_cert?: {
     cert_name: string;
     cert_no?: string | null;
@@ -72,6 +73,7 @@ export async function createPersonnel(formData: {
           position: formData.position?.trim() || null,
           email: formData.email?.trim() || null,
           discord_webhook_url: formData.discord_webhook_url?.trim() || null,
+          discord_user_id: formData.discord_user_id?.trim() || null,
           enable_discord: formData.enable_discord !== false,
           enable_email: formData.enable_email !== false,
           is_active: formData.is_active !== false,
@@ -112,6 +114,7 @@ export async function updatePersonnel(
     position?: string | null;
     email?: string | null;
     discord_webhook_url?: string | null;
+    discord_user_id?: string | null;
     enable_discord: boolean;
     enable_email: boolean;
     is_active: boolean;
@@ -132,6 +135,7 @@ export async function updatePersonnel(
         position: formData.position?.trim() || null,
         email: formData.email?.trim() || null,
         discord_webhook_url: formData.discord_webhook_url?.trim() || null,
+        discord_user_id: formData.discord_user_id?.trim() || null,
         enable_discord: formData.enable_discord,
         enable_email: formData.enable_email,
         is_active: formData.is_active,

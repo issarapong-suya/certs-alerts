@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { MasterPosition, MasterCertType } from '@/types/database';
 
 // ---------------- Master Positions ----------------
@@ -11,14 +12,20 @@ export async function getMasterPositions(): Promise<{
   error: string | null;
 }> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
       .from('master_positions')
       .select('*')
       .order('id', { ascending: true });
 
     if (error) {
-      return { data: null, error: error.message };
+      const supabase = await createClient();
+      const { data: fallbackData, error: fbError } = await supabase
+        .from('master_positions')
+        .select('*')
+        .order('id', { ascending: true });
+      if (fbError) return { data: null, error: fbError.message };
+      return { data: fallbackData as MasterPosition[], error: null };
     }
     return { data: data as MasterPosition[], error: null };
   } catch (err: any) {
@@ -96,14 +103,20 @@ export async function getMasterCertTypes(): Promise<{
   error: string | null;
 }> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
       .from('master_cert_types')
       .select('*')
       .order('id', { ascending: true });
 
     if (error) {
-      return { data: null, error: error.message };
+      const supabase = await createClient();
+      const { data: fallbackData, error: fbError } = await supabase
+        .from('master_cert_types')
+        .select('*')
+        .order('id', { ascending: true });
+      if (fbError) return { data: null, error: fbError.message };
+      return { data: fallbackData as MasterCertType[], error: null };
     }
     return { data: data as MasterCertType[], error: null };
   } catch (err: any) {

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Personnel, MasterPosition, MasterCertType } from '@/types/database';
 import { createPersonnel, updatePersonnel } from '@/actions/personnel';
-import { testPersonalDiscord, testPersonalEmail } from '@/actions/settings';
+import { testPersonalDiscord, testPersonalEmail, testPersonalDiscordDM } from '@/actions/settings';
 import { showToast, showSuccess, showError, showLoading, closeLoading } from '@/lib/swal';
 import { formatDisplayDate } from '@/lib/certificate-utils';
 
@@ -38,6 +38,7 @@ const FALLBACK_POSITIONS = [
   'เจ้าหน้าที่เวชกิจฉุกเฉิน',
   'พนักงานขับรถพยาบาล',
   'เจ้าหน้าที่กู้ชีพ',
+  'พนักงานช่วยเหลือคนไข้',
 ];
 
 const FALLBACK_CERTS = [
@@ -46,6 +47,7 @@ const FALLBACK_CERTS = [
   'ประกาศนียบัตรอาสาสมัครฉุกเฉินการแพทย์ (EMR)',
   'ประกาศนียบัตรการช่วยฟื้นคืนชีพขั้นสูง (ACLS)',
   'ประกาศนียบัตรการช่วยฟื้นคืนชีพขั้นพื้นฐาน (BLS/CPR)',
+  'ประกาศนียบัตรการดูแลผู้บาดเจ็บขั้นสูง (ITLS/PHTLS)',
   'ใบอนุญาตขับรถยนต์ส่วนบุคคล/รถพยาบาลฉุกเฉิน',
 ];
 
@@ -62,17 +64,21 @@ export default function PersonnelModal({
   // Basic Info
   const [name, setName] = useState('');
   const [position, setPosition] = useState('');
+  const [isCustomPosition, setIsCustomPosition] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [note, setNote] = useState('');
 
   // Personal Alerts
   const [email, setEmail] = useState('');
+  const [discordMode, setDiscordMode] = useState<'webhook' | 'dm'>('webhook');
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState('');
+  const [discordUserId, setDiscordUserId] = useState('');
   const [enableDiscord, setEnableDiscord] = useState(true);
   const [enableEmail, setEnableEmail] = useState(true);
 
   // Initial certificate (for Add mode only)
   const [initialCertName, setInitialCertName] = useState('');
+  const [isCustomCert, setIsCustomCert] = useState(false);
   const [initialCertNo, setInitialCertNo] = useState('');
   const [initialExpireDate, setInitialExpireDate] = useState('');
   const [initialCertNote, setInitialCertNote] = useState('');
@@ -90,23 +96,31 @@ export default function PersonnelModal({
   useEffect(() => {
     if (personnel) {
       setName(personnel.name || '');
-      setPosition(personnel.position || '');
+      const pos = personnel.position || '';
+      setPosition(pos);
+      setIsCustomPosition(!!pos && !positionOptions.includes(pos));
       setIsActive(personnel.is_active !== false);
       setNote(personnel.note || '');
       setEmail(personnel.email || '');
       setDiscordWebhookUrl(personnel.discord_webhook_url || '');
+      setDiscordUserId(personnel.discord_user_id || '');
+      setDiscordMode(personnel.discord_user_id ? 'dm' : 'webhook');
       setEnableDiscord(personnel.enable_discord !== false);
       setEnableEmail(personnel.enable_email !== false);
     } else {
       setName('');
       setPosition('');
+      setIsCustomPosition(false);
       setIsActive(true);
       setNote('');
       setEmail('');
       setDiscordWebhookUrl('');
+      setDiscordUserId('');
+      setDiscordMode('webhook');
       setEnableDiscord(true);
       setEnableEmail(true);
       setInitialCertName('');
+      setIsCustomCert(false);
       setInitialCertNo('');
       setInitialExpireDate('');
       setInitialCertNote('');
@@ -130,7 +144,8 @@ export default function PersonnelModal({
         name: name.trim(),
         position: position.trim() || null,
         email: email.trim() || null,
-        discord_webhook_url: discordWebhookUrl.trim() || null,
+        discord_webhook_url: discordMode === 'webhook' ? (discordWebhookUrl.trim() || null) : null,
+        discord_user_id: discordMode === 'dm' ? (discordUserId.trim() || null) : null,
         enable_discord: enableDiscord,
         enable_email: enableEmail,
         is_active: isActive,
@@ -141,7 +156,8 @@ export default function PersonnelModal({
         name: name.trim(),
         position: position.trim() || null,
         email: email.trim() || null,
-        discord_webhook_url: discordWebhookUrl.trim() || null,
+        discord_webhook_url: discordMode === 'webhook' ? (discordWebhookUrl.trim() || null) : null,
+        discord_user_id: discordMode === 'dm' ? (discordUserId.trim() || null) : null,
         enable_discord: enableDiscord,
         enable_email: enableEmail,
         is_active: isActive,
@@ -173,13 +189,28 @@ export default function PersonnelModal({
       showError('กรุณากรอก Discord Webhook URL ก่อนกดทดสอบ');
       return;
     }
-    showLoading('กำลังทดสอบส่งเข้า Discord...');
+    showLoading('กำลังทดสอบส่งเข้า Discord Webhook...');
     const res = await testPersonalDiscord(discordWebhookUrl.trim());
     closeLoading();
     if (res.success) {
-      showSuccess('ส่งเข้า Discord สำเร็จแล้ว!', 'กรุณาตรวจสอบข้อความใน Discord ของคุณ');
+      showSuccess('ส่งเข้า Discord สำเร็จแล้ว!', 'กรุณาตรวจสอบข้อความในห้องแชท Discord ของคุณ');
     } else {
       showError('ส่งไม่สำเร็จ', res.error || 'Discord Webhook URL ไม่ถูกต้อง');
+    }
+  }
+
+  async function handleTestDiscordDM() {
+    if (!discordUserId.trim()) {
+      showError('กรุณากรอก Discord User ID ก่อนกดทดสอบ');
+      return;
+    }
+    showLoading('กำลังทดสอบส่ง Direct Message (DM) เข้า Discord...');
+    const res = await testPersonalDiscordDM(discordUserId.trim());
+    closeLoading();
+    if (res.success) {
+      showSuccess('ส่ง DM สำเร็จแล้ว!', 'กรุณาตรวจสอบข้อความ Direct Message ใน Discord ของคุณ');
+    } else {
+      showError('ส่ง DM ไม่สำเร็จ', res.error || 'ไม่สามารถส่ง DM ได้');
     }
   }
 
@@ -265,21 +296,50 @@ export default function PersonnelModal({
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <Briefcase className="w-4 h-4 text-slate-400" />
-                ตำแหน่ง
+                ตำแหน่ง (จากฐานข้อมูล)
               </label>
-              <input
-                type="text"
-                list="pos-list"
-                value={position}
-                onChange={(e) => setPosition(e.target.value)}
-                placeholder="เลือกหรือระบุตำแหน่ง"
-                className="w-full px-4 py-2.5 text-base border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white"
-              />
-              <datalist id="pos-list">
-                {positionOptions.map((pos) => (
-                  <option key={pos} value={pos} />
-                ))}
-              </datalist>
+              <div className="space-y-2">
+                <select
+                  value={
+                    isCustomPosition
+                      ? '__custom__'
+                      : positionOptions.includes(position)
+                      ? position
+                      : position
+                      ? '__custom__'
+                      : ''
+                  }
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setIsCustomPosition(true);
+                      setPosition('');
+                    } else {
+                      setIsCustomPosition(false);
+                      setPosition(e.target.value);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 text-base border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white cursor-pointer font-medium"
+                >
+                  <option value="">-- เลือกตำแหน่งจากฐานข้อมูล ({positionOptions.length} รายการ) --</option>
+                  {positionOptions.map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                  <option value="__custom__">➕ ระบุตำแหน่งอื่นๆ (พิมพ์ระบุเอง)...</option>
+                </select>
+
+                {isCustomPosition && (
+                  <input
+                    type="text"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    placeholder="พิมพ์ระบุชื่อตำแหน่ง..."
+                    className="w-full px-4 py-2.5 text-sm border border-indigo-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50/20 text-slate-900"
+                    autoFocus
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -290,10 +350,37 @@ export default function PersonnelModal({
               การแจ้งเตือนส่วนตัวของบุคคลนี้ (Personal Alerts)
             </div>
 
-            {/* Discord Webhook */}
-            <div className="space-y-1.5">
+            {/* Discord Notification (Webhook or DM) */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <label className="font-semibold text-slate-700">Discord Webhook ส่วนตัว</label>
+                <div className="flex items-center gap-2">
+                  <label className="font-semibold text-slate-700">การแจ้งเตือน Discord</label>
+                  <div className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setDiscordMode('webhook')}
+                      className={`px-2.5 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        discordMode === 'webhook'
+                          ? 'bg-white text-indigo-700 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ห้องแชท (Webhook)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscordMode('dm')}
+                      className={`px-2.5 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        discordMode === 'dm'
+                          ? 'bg-white text-indigo-700 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ส่วนตัว (DM บอท)
+                    </button>
+                  </div>
+                </div>
+
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -304,24 +391,56 @@ export default function PersonnelModal({
                   <span className="text-xs font-medium text-slate-600">เปิดส่ง Discord</span>
                 </label>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={discordWebhookUrl}
-                  onChange={(e) => setDiscordWebhookUrl(e.target.value)}
-                  placeholder="https://discord.com/api/webhooks/..."
-                  className="flex-1 px-4 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleTestDiscord}
-                  disabled={!discordWebhookUrl.trim()}
-                  className="px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs rounded-xl font-semibold transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  ทดสอบ
-                </button>
-              </div>
+
+              {discordMode === 'webhook' ? (
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={discordWebhookUrl}
+                      onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                      placeholder="https://discord.com/api/webhooks/..."
+                      className="flex-1 px-4 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestDiscord}
+                      disabled={!discordWebhookUrl.trim()}
+                      className="px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs rounded-xl font-semibold transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      ทดสอบ
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    ส่งเข้าห้องแชทใน Discord Server (สามารถสร้างห้องส่วนตัวของตนเองเพื่อไม่ให้คนอื่นเห็นได้)
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={discordUserId}
+                      onChange={(e) => setDiscordUserId(e.target.value)}
+                      placeholder="ระบุ Discord User ID (เช่น 412345678901234567)"
+                      className="flex-1 px-4 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestDiscordDM}
+                      disabled={!discordUserId.trim()}
+                      className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-xl font-semibold transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      ทดสอบ DM
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    บอทจะทัก DM ข้อความส่วนตัวหาบุคคลนี้โดยตรง (วิธีดู User ID: เปิด Developer Mode ใน Discord &gt; คลิกขวาชื่อตัวเอง &gt; Copy User ID)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Email */}
@@ -367,23 +486,50 @@ export default function PersonnelModal({
                 ใบประกาศนียบัตรเริ่มต้น (สามารถเพิ่มใบที่ 2, 3... ได้ภายหลัง)
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ชื่อใบประกาศ / หลักสูตร
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
+                  ชื่อใบประกาศ / หลักสูตร (จากฐานข้อมูล)
                 </label>
-                <input
-                  type="text"
-                  list="common-certs"
-                  value={initialCertName}
-                  onChange={(e) => setInitialCertName(e.target.value)}
-                  placeholder="เลือกหรือพิมพ์ชื่อใบประกาศ"
-                  className="w-full px-4 py-2 text-sm border border-slate-300 rounded-xl bg-white"
-                />
-                <datalist id="common-certs">
+                <select
+                  value={
+                    isCustomCert
+                      ? '__custom__'
+                      : certTypeOptions.includes(initialCertName)
+                      ? initialCertName
+                      : initialCertName
+                      ? '__custom__'
+                      : ''
+                  }
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setIsCustomCert(true);
+                      setInitialCertName('');
+                    } else {
+                      setIsCustomCert(false);
+                      setInitialCertName(e.target.value);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl bg-white cursor-pointer font-medium"
+                >
+                  <option value="">-- เลือกประเภทใบประกาศจากฐานข้อมูล ({certTypeOptions.length} รายการ) --</option>
                   {certTypeOptions.map((c) => (
-                    <option key={c} value={c} />
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </datalist>
+                  <option value="__custom__">➕ ระบุชื่อใบประกาศอื่นๆ (พิมพ์เอง)...</option>
+                </select>
+
+                {isCustomCert && (
+                  <input
+                    type="text"
+                    value={initialCertName}
+                    onChange={(e) => setInitialCertName(e.target.value)}
+                    placeholder="พิมพ์ชื่อใบประกาศ..."
+                    className="w-full px-4 py-2 text-sm border border-indigo-300 rounded-xl bg-indigo-50/20 text-slate-900"
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

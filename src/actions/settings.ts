@@ -151,3 +151,70 @@ export async function testPersonalEmail(email: string): Promise<{ success: boole
     return { success: false, error: err.message || 'Failed to send Email test' };
   }
 }
+
+export async function testPersonalDiscordDM(discordUserId: string): Promise<{ success: boolean; error?: string }> {
+  if (!discordUserId?.trim()) {
+    return { success: false, error: 'กรุณาระบุ Discord User ID' };
+  }
+
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) {
+    return {
+      success: false,
+      error: 'ยังไม่ได้ระบุ DISCORD_BOT_TOKEN ในระบบ (กรุณาเพิ่ม DISCORD_BOT_TOKEN ใน Environment Variables)',
+    };
+  }
+
+  try {
+    const createDmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ recipient_id: discordUserId.trim() }),
+    });
+
+    if (!createDmRes.ok) {
+      const errJson = await createDmRes.json().catch(() => ({}));
+      return {
+        success: false,
+        error: `ไม่สามารถเปิดห้อง DM กับผู้ใช้ได้ (${createDmRes.status}): ${errJson.message || 'ตรวจดูว่าผู้ใช้อยู่ในเซิร์ฟเวอร์เดียวกับบอท และเปิดรับ DM หรือไม่'}`,
+      };
+    }
+
+    const dmChannel = await createDmRes.json();
+
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: `🔔 **ทดสอบการแจ้งเตือน Discord Direct Message (DM) สำเร็จ!**\nระบบ Personnel Certificate Alert System สามารถส่งข้อความส่วนตัวถึงคุณได้เรียบร้อยแล้ว`,
+        embeds: [
+          {
+            title: '✅ การเชื่อมต่อ DM สำเร็จ (Direct Message Verified)',
+            description: 'ระบบพร้อมส่งการแจ้งเตือนวันหมดอายุใบประกาศนียบัตรเข้า DM ของคุณโดยตรงแล้ว',
+            color: 5763719,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+
+    if (!msgRes.ok) {
+      const errJson = await msgRes.json().catch(() => ({}));
+      return {
+        success: false,
+        error: `ส่ง DM ไม่สำเร็จ: ${errJson.message || 'Discord API Error'}`,
+      };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to send Discord DM test' };
+  }
+}
+

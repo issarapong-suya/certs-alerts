@@ -43,6 +43,7 @@ export default function ManageCertificatesModal({
 
   // Form states
   const [certName, setCertName] = useState('');
+  const [isCustomCert, setIsCustomCert] = useState(false);
   const [certNo, setCertNo] = useState('');
   const [expireDate, setExpireDate] = useState('');
   const [statusNote, setStatusNote] = useState('');
@@ -59,6 +60,7 @@ export default function ManageCertificatesModal({
     setIsAdding(false);
     setEditingCertId(null);
     setCertName('');
+    setIsCustomCert(false);
     setCertNo('');
     setExpireDate('');
     setStatusNote('');
@@ -67,7 +69,9 @@ export default function ManageCertificatesModal({
   function startEdit(cert: CertificateItem) {
     setIsAdding(false);
     setEditingCertId(cert.id);
-    setCertName(cert.cert_name || '');
+    const existingName = cert.cert_name || '';
+    setCertName(existingName);
+    setIsCustomCert(Boolean(existingName && !certTypeOptions.includes(existingName)));
     setCertNo(cert.cert_no || '');
     setExpireDate(cert.expire_date || '');
     setStatusNote(cert.status_note || '');
@@ -189,20 +193,50 @@ export default function ManageCertificatesModal({
                     <div className="font-bold text-sm text-indigo-900">
                       แก้ไขใบประกาศนียบัตร
                     </div>
-                    <div>
-                      <input
-                        type="text"
-                        list="modal-certs"
-                        value={certName}
-                        onChange={(e) => setCertName(e.target.value)}
-                        placeholder="ชื่อใบประกาศ"
-                        className="w-full px-4 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900"
-                      />
-                      <datalist id="modal-certs">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        ชื่อใบประกาศ / หลักสูตร (จากฐานข้อมูล) <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={
+                          isCustomCert
+                            ? '__custom__'
+                            : certTypeOptions.includes(certName)
+                            ? certName
+                            : certName
+                            ? '__custom__'
+                            : ''
+                        }
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomCert(true);
+                            setCertName('');
+                          } else {
+                            setIsCustomCert(false);
+                            setCertName(e.target.value);
+                          }
+                        }}
+                        className="w-full px-4 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 cursor-pointer font-medium"
+                      >
+                        <option value="">-- เลือกประเภทใบประกาศจากฐานข้อมูล ({certTypeOptions.length} รายการ) --</option>
                         {certTypeOptions.map((c) => (
-                          <option key={c} value={c} />
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
                         ))}
-                      </datalist>
+                        <option value="__custom__">➕ ระบุชื่อใบประกาศอื่นๆ (พิมพ์เอง)...</option>
+                      </select>
+
+                      {isCustomCert && (
+                        <input
+                          type="text"
+                          value={certName}
+                          onChange={(e) => setCertName(e.target.value)}
+                          placeholder="พิมพ์ชื่อใบประกาศ..."
+                          className="w-full px-4 py-2 text-sm border border-indigo-300 rounded-xl bg-indigo-50/20 text-slate-900"
+                          autoFocus
+                        />
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <input
@@ -317,24 +351,50 @@ export default function ManageCertificatesModal({
                 เพิ่มใบประกาศนียบัตรใหม่
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ชื่อใบประกาศ / หลักสูตร <span className="text-red-500">*</span>
+                  ชื่อใบประกาศ / หลักสูตร (จากฐานข้อมูล) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  list="new-cert-sug"
-                  value={certName}
-                  onChange={(e) => setCertName(e.target.value)}
-                  placeholder="เลือกหรือพิมพ์ชื่อใบประกาศ"
-                  className="w-full px-4 py-2 text-sm border border-slate-300 rounded-xl bg-white"
-                />
-                <datalist id="new-cert-sug">
+                <select
+                  value={
+                    isCustomCert
+                      ? '__custom__'
+                      : certTypeOptions.includes(certName)
+                      ? certName
+                      : certName
+                      ? '__custom__'
+                      : ''
+                  }
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setIsCustomCert(true);
+                      setCertName('');
+                    } else {
+                      setIsCustomCert(false);
+                      setCertName(e.target.value);
+                    }
+                  }}
+                  className="w-full px-4 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 cursor-pointer font-medium"
+                >
+                  <option value="">-- เลือกประเภทใบประกาศจากฐานข้อมูล ({certTypeOptions.length} รายการ) --</option>
                   {certTypeOptions.map((c) => (
-                    <option key={c} value={c} />
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </datalist>
+                  <option value="__custom__">➕ ระบุชื่อใบประกาศอื่นๆ (พิมพ์เอง)...</option>
+                </select>
+
+                {isCustomCert && (
+                  <input
+                    type="text"
+                    value={certName}
+                    onChange={(e) => setCertName(e.target.value)}
+                    placeholder="พิมพ์ชื่อใบประกาศ..."
+                    className="w-full px-4 py-2 text-sm border border-indigo-300 rounded-xl bg-indigo-50/20 text-slate-900"
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

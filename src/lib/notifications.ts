@@ -39,8 +39,8 @@ export async function sendIndividualPersonnelAlert(person: Personnel): Promise<{
   let discordResult = { attempted: false, success: false, error: '' };
   let emailResult = { attempted: false, success: false, error: '' };
 
-  // 1. Send to Person's Discord Webhook
-  if (person.enable_discord && person.discord_webhook_url?.trim()) {
+  // 1. Send to Person's Discord (Supports both Webhook and Bot DM)
+  if (person.enable_discord && (person.discord_webhook_url?.trim() || person.discord_user_id?.trim())) {
     discordResult.attempted = true;
     try {
       const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
@@ -99,19 +99,54 @@ export async function sendIndividualPersonnelAlert(person: Personnel): Promise<{
         ],
       };
 
-      const res = await fetch(person.discord_webhook_url.trim(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // 1.1 If Discord User ID is set and Bot Token available -> Send DM
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      if (person.discord_user_id?.trim() && botToken) {
+        const createDmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bot ${botToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ recipient_id: person.discord_user_id.trim() }),
+        });
 
-      if (res.ok) {
-        discordResult.success = true;
-      } else {
-        discordResult.error = `Discord API error: ${res.status}`;
+        if (createDmRes.ok) {
+          const dmChannel = await createDmRes.json();
+          const sendRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+          if (sendRes.ok) {
+            discordResult.success = true;
+          } else {
+            discordResult.error = `Discord DM Error: ${sendRes.status}`;
+          }
+        } else {
+          discordResult.error = `Discord DM Channel Error: ${createDmRes.status}`;
+        }
+      }
+
+      // 1.2 If Webhook URL is set -> Send Webhook
+      if (person.discord_webhook_url?.trim()) {
+        const res = await fetch(person.discord_webhook_url.trim(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          discordResult.success = true;
+        } else if (!discordResult.success) {
+          discordResult.error = `Discord Webhook error: ${res.status}`;
+        }
       }
     } catch (e: any) {
-      discordResult.error = e.message || 'Failed to send Discord webhook';
+      discordResult.error = e.message || 'Failed to send Discord alert';
     }
   }
 

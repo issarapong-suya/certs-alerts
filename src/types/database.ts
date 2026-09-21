@@ -17,6 +17,7 @@ export interface Personnel {
   position: string | null;
   email: string | null;
   discord_webhook_url: string | null;
+  discord_user_id?: string | null;
   enable_discord: boolean;
   enable_email: boolean;
   is_active: boolean;
